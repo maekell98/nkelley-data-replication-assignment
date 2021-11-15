@@ -1,0 +1,13 @@
+---
+title: "nkelley_data_replication_assignment"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, comment = "##", prompt = TRUE,
+     tidy = TRUE, tidy.opts = list(width.cutoff = 75), fig.path = "img/")
+```
+
