@@ -1,0 +1,140 @@
+---
+title: "nkelley-data-replication-assignment"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+**Preliminaries**
+Install {moments}. 
+Load the following packages:
+```{r load packages}
+library(curl)
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(moments)
+```
+
+Figure 1: Density plots of Tb of 10 Kalahari lizard species in summer: distributions are centred on modal temperature of each species. Left skewness is visually evident for many species and significant in seven (Table S1)
+
+"Because these analyses evaluate an explicit (a priori) hypothesis that Tb distributions are left-skewed, we used one-tailed tests."
+
+
+```{r load data}
+f <- curl("https://raw.githubusercontent.com/maekell98/nkelley-data-replication-assignment/main/doi_10-5/KalahariTbData.csv")
+kl <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(kl)
+```
+Note: Southern latitude summer = December through February. Therefore, we must subset the data by date to include only data collected in the summer months. 
+```{r subset by date}
+#in order to subset by date, dates must be coerced into a format recognized by r:
+#date formatting: https://stackoverflow.com/questions/38146160/how-to-convert-dd-mm-yy-to-yyyy-mm-dd-in-r
+kl$date <- as.Date(kl$date, "%m/%d/%Y")
+
+#kls = kalahari lizards summer subset
+#date subsetting: https://www.statology.org/subset-by-date-range-in-r/
+kld <- kl[kl$date >= "0069-12-02" & kl$date <= "0070-02-27", ]
+
+#not enough data for species Trachylepis spilogaster, deleting for further analyis
+kls <- subset(kld, species!="Trachylepis variegata")
+head(kls)
+```
+
+In order to obtain density plots by species, we first subset by species:
+```{r subset by species}
+#used unique to quickly get a list of species in the kl data set
+unique(kld$species)
+
+#now we create a subset for each species
+subset.species1 <- subset(kls, species == "Agama aculeata")
+subset.species2 <- subset(kls, species == "Heliobolus lugubris")
+subset.species3 <- subset(kls, species == "Meroles squamulosus")
+subset.species4 <- subset(kls, species == "Meroles suborbitalis")
+subset.species5 <- subset(kls, species == "Nucras tessellata")
+subset.species6 <- subset(kls, species == "Pedioplanis lineoocellata")
+subset.species7 <- subset(kls, species == "Pedioplanis namaquensis") 
+subset.species8 <- subset(kls, species == "Trachylepis occidentalis") 
+subset.species9 <- subset(kls, species == "Trachylepis sparsa") 
+subset.species10 <- subset(kls, species == "Trachylepis spilogaster") 
+```
+
+Now we can run the ggplot. In order to show all the species subsets on the same plot, we simply add geom_density() with each of the different subsets. 
+```{r density plot}
+#constructing density  plots: http://www.sthda.com/english/wiki/ggplot2-density-plot-quick-start-guide-r-software-and-data-visualization
+s <- ggplot(subset.species1, aes(x=Tb)) + 
+  geom_density() +
+  geom_density(data = subset.species2) +
+  geom_density(data = subset.species3) +
+  geom_density(data = subset.species4) +
+  geom_density(data = subset.species5) +
+  geom_density(data = subset.species6) +
+  geom_density(data = subset.species7) +
+  geom_density(data = subset.species8) +
+  geom_density(data = subset.species9) +
+  geom_density(data = subset.species10) +
+  #add mean line:
+  geom_vline(aes(xintercept=mean(Tb)),
+            color="black", linetype="dashed") +
+  #classic theme seems most appropriate (removes grid background, adds tick marks, black and white)
+  theme_classic() +
+  #add labels,
+  #code for degrees celsius symbol: https://stackoverflow.com/questions/51799118/writing-the-symbol-degrees-celsius-in-axis-titles-with-r-plotly/51799161 
+  labs(title="Density plots Kalahari lizards, summer",x="Body temperature (\u00B0C), centered on modal temperature", y = "Density")
+s
+
+#need to figure out how to center on modal temperature
+```
+Basic R script for calculating stats describing Tb distributions:
+
+```{r script Tb distributions}
+
+skewTb <- kls %>%
+    group_by(species) %>%
+    summarise(
+        meanTb = round(mean(Tb, na.rm = TRUE), digits = 2),
+        medTb  = median(Tb,na.rm = TRUE),
+        MAD = round(mad(Tb, na.rm = TRUE), digits = 2),
+        minTb = min(Tb, na.rm = TRUE),
+        maxBT = max(Tb, na.rm = TRUE),
+        nBT = n(),
+        SkewCoef = round(agostino.test(Tb, alternative = "greater")$statistic[1], digits = 3),
+        SkewP = agostino.test(Tb, alternative = "greater")$p.value,
+        Family = unique(family))
+```
+
+Figure 4: Body temperature histograms (with density curves) for Kalahari lizards in summer. Each panel gives the species name, family, D'Agostino skewness coefficient with significance levels adjusted for multiple comparisons (*p < .05, **p < .01 and ***p < .001) and sample size.
+
+```{r density curves with histograms for kl data}
+#prep data frame for individual facet annotations:
+ann <- kls %>%
+  group_by(species) %>%
+  summarise(
+    Family = unique(family),
+    )
+sig <- c('-1.291 ***', '-0.182 ns', '0.162 ns', '-1.241 ***', '-1.152 **', '1.878 ***', '-0.350 ns', '-1.295 ***', '-1.490 ***', '-1.350 ***')
+n <- c('N = 75', 'N = 30', 'N = 83', 'N = 124', 'N = 38', 'N = 290', 'N = 69', 'N = 101', 'N = 73', 'N = 106')
+ann <- cbind(ann, sig, n)
+#n and sig can be found in skewTb data frame as well, but I was having trouble getting these onto my ggplots using just the skewTb df, so I created a new dataframe with the relevant information. 
+
+#code for ggplot histogram+density plot: http://www.sthda.com/english/wiki/ggplot2-density-plot-quick-start-guide-r-software-and-data-visualization
+dph1 <- kls %>% 
+  ggplot(aes(x=Tb))+
+  geom_histogram(aes(y=..density..), alpha=0.5, position="identity", colour="black", fill="grey")+
+  geom_density(alpha=.2)+
+  theme_classic()+
+  #set axes:
+  xlim(25, 45) + ylim(0, 0.3)+
+  #facet_wrap(): https://ggplot2-book.org/facet.html
+  #arrange grid (by species) and coerce into 3x4 using nrow
+  facet_wrap(~species, nrow = 4)+
+  #add annotations using geom_text: https://r-graphics.org/recipe-annotate-facet
+  geom_text(data = ann,x = 29, y = 0.28, aes(label = Family))+
+  geom_text(data = ann,x = 29, y = 0.24, aes(label = sig))+
+  geom_text(data = ann,x = 29, y = 0.2, aes(label = n))+   #labels:
+  labs(title="Kalahari diurnal lizards--summer",x="Body temperature (\u00B0C)", y = "Density")
+dph1
+```
+
