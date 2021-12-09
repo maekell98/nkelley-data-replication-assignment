@@ -9,10 +9,14 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, comment = "##", prompt = TRUE, tidy = TRUE, tidy.opts = list(width.cutoff = 75), fig.path = "img/")
 ```
+
+![](https://c.tenor.com/xVFgnQKqTvoAAAAM/wink-gecko.gif)
+
 # Introduction
 
+short description of the study and of the specific data and replication analyses you will be performing, to orient your reader. Outline (briefly) the goal of the original paper, the data set used, and the analyses conducted, then describe which you will replicate. You should also demonstrate how you read your datafile into R, and show a few lines of raw data in your output (e.g., using head()).
 
 ## Preliminaries
 Install {moments}. 
@@ -26,6 +30,8 @@ library(moments)
 ```
 
 # Figure 1 Replication
+
+![](https://i.giphy.com/media/xUPGcLb2KgCWcLI0Pm/giphy-downsized-large.gif)
 
 Figure 1: Density plots of Tb of 10 Kalahari lizard species in summer: distributions are centred on modal temperature of each species. Left skewness is visually evident for many species and significant in seven (Table S1)
 
@@ -96,7 +102,7 @@ ss10 <- subset(kls, species == "Trachylepis spilogaster") %>% mutate(Tbm = Tb - 
 ```
 
 Now we can run the ggplot. In order to show all the species subsets on the same plot, we simply add geom_density() with each of the different subsets. 
-```{r density plot}
+```{r Fig1}
 #constructing density  plots: http://www.sthda.com/english/wiki/ggplot2-density-plot-quick-start-guide-r-software-and-data-visualization
 s <- ggplot(ss1, aes(x=Tbm)) + 
   geom_density() +
@@ -132,26 +138,9 @@ For comparison, we have the origial plot:
 
 <img src="img/LizardsFig1.jpg" width="800px"/>
 
-Basic R script for calculating stats describing Tb distributions:
-
-```{r script Tb distributions}
-
-skewTb <- kls %>%
-    group_by(species) %>%
-    summarise(
-        meanTb = round(mean(Tb, na.rm = TRUE), digits = 2),
-        medTb  = median(Tb,na.rm = TRUE),
-        MAD = round(mad(Tb, na.rm = TRUE), digits = 2),
-        minTb = min(Tb, na.rm = TRUE),
-        maxBT = max(Tb, na.rm = TRUE),
-        nBT = n(),
-        SkewCoef = round(agostino.test(Tb, alternative = "greater")$statistic[1], digits = 3),
-        SkewP = agostino.test(Tb, alternative = "greater")$p.value,
-        Family = unique(family))
-```
-
-
 # Figure 3 Replication
+
+![](https://i.giphy.com/media/9Pi3zBrQIOM4971kuc/giphy.webp)
 
 Figure 3: Body temperature skewness (jittered) for desert lizards, with values by family (or by subfamily for Agamidae) and by continent. Three families are represented by one species. No pattern (desert, taxon) is evident.
 
@@ -161,6 +150,7 @@ kl <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
 kl['desert']='Africa'
 head(kl)
 
+#Basic R script for calculating stats describing Tb distributions:
 klskew <- kl %>%
     group_by(family) %>%
     summarise(
@@ -227,7 +217,7 @@ lskew <- bind_rows(nlskew, alskew, klskew)
 
 ```
 
-```{r dot plot}
+```{r Fig3}
 #make a dot plot: http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html
 lplot <- 
   ggplot(lskew, aes(x=SkewCoef, y=family, group=desert)) +
@@ -257,9 +247,11 @@ You can see my plot did not include the phylogenetic comparison. It also contain
 
 # Figure 4 Replication
 
+![](https://i.pinimg.com/originals/e9/9d/0a/e99d0a00805a02b6e2b9835bc2f454aa.gif)
+
 Figure 4: Body temperature histograms (with density curves) for Kalahari lizards in summer. Each panel gives the species name, family, D'Agostino skewness coefficient with significance levels adjusted for multiple comparisons (*p < .05, **p < .01 and ***p < .001) and sample size.
 
-```{r density curves with histograms for kl data, fig.width=8,fig.height=11}
+```{r Fig4, fig.width=8,fig.height=11}
 #to specify figure dimensions: https://stackoverflow.com/questions/39634520/specify-height-and-width-of-ggplot-graph-in-rmarkdown-knitr-output
 
 #prep data frame for individual facet annotations:
