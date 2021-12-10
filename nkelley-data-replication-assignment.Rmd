@@ -253,6 +253,7 @@ ld <- bind_rows(kl, nl, al)
 
 #combine skew summaries:
 lskew <- bind_rows(nlskew, alskew, klskew)
+lskew
 
 ```
 
