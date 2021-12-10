@@ -16,10 +16,23 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, comment = "##", prompt = TRU
 
 # Introduction
 
-short description of the study and of the specific data and replication analyses you will be performing, to orient your reader. Outline (briefly) the goal of the original paper, the data set used, and the analyses conducted, then describe which you will replicate. You should also demonstrate how you read your datafile into R, and show a few lines of raw data in your output (e.g., using head()).
+## The Study
+
+This study looked at body temperature distributions of diurnal desert lizards across three continents (North America, Africa, and Australia). Data was gathered over several decades and later recycled for use in this study. Body temperature distributions were expected to exhibit left-skewness. This study assessed whether skewness would differ between phylogeny, location, body size, or median body temperature, but no significant differences were found. 
+
+## Data Analyses
+
+Density plots were constructed for each African Kalahari desert lizard species and standardized so the modal temperature was set to zero. This allowed for comparison of skewness of body temperature between species. This also allowed visualization of left skewness with supporting data showing that seven species exhibited significant left skewness. 
+
+Supporting data included mean body temperature, median body temperature, mean absolute deviation, minimum and maximum body temperatures, number of samples per group, and the D'Agostino skewness coefficient and the related p value. Minimum sample size for inclusion was N = 23. Calculations were run separately for each season as well as continent/latitudinal area. Data for Australia and Africa was able to be pooled, but North American data spanned 14 degrees of latitude and needed to be separated into two regions because this can bias skewness. It was noted that the D'Agostino skewness coefficient is very sensitive to sample size and did not provide significant results for any species with N < 50. However, these were included due to the designation of N = 23 as the minimum sample size. One-tailed tests were used due to the hypothesis that all samples would be left-skewed. 
+
+Phylogenetic analysis was not done because they were using older data which did not include enough deserts/species with overlapping clades to be appropriate for phylogenetic analysis. Essentially, the preliminary requirements were not met for a full factorial ANOVA. 
+
 
 ## Preliminaries
+
 Install {moments}. 
+
 Load the following packages:
 ```{r load packages}
 library(curl)
@@ -33,16 +46,19 @@ library(moments)
 
 ![](https://i.giphy.com/media/xUPGcLb2KgCWcLI0Pm/giphy-downsized-large.gif)
 
-Figure 1: Density plots of Tb of 10 Kalahari lizard species in summer: distributions are centred on modal temperature of each species. Left skewness is visually evident for many species and significant in seven (Table S1)
+## Figure 1 Caption
 
-"Because these analyses evaluate an explicit (a priori) hypothesis that Tb distributions are left-skewed, we used one-tailed tests."
+Density plots of Tb of 10 Kalahari lizard species in summer: distributions are centred on modal temperature of each species. Left skewness is visually evident for many species and significant in seven (Table S1)
 
+## Step 1: Load the Data
 
 ```{r load data}
 f <- curl("https://raw.githubusercontent.com/maekell98/nkelley-data-replication-assignment/main/doi_10-5/KalahariTbData.csv")
 kl <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
 head(kl)
 ```
+## Step 2: Clean up the data and select the correct subset for analysis
+
 Note: Southern latitude summer = December through February. Therefore, we must subset the data by date to include only data collected in the summer months. 
 
 "We arbitrarily set a minimum sample size of N = 23 Tb for inclusion." Since Trachylepis variegata does not have this many samples, it will be excluded from further analysis at the end of the the following chunk. 
@@ -60,8 +76,10 @@ kld <- kl[kl$date >= "0069-12-02" & kl$date <= "0070-02-27", ]
 kls <- subset(kld, species!="Trachylepis variegata")
 head(kls)
 ```
+## Step 3: Create Subsets to be Plotted
 
-In order to obtain density plots by species, we first subset by species:
+In order to obtain density plots by species, we first subset by species. Each subset is mutated so they are standardized for comparison with each other. This involves subtracting the body temperature mode from each body temperature measurement which essentially sets the mode for each sample to 0 without changing the relationship between the individual points. I was having a really hard time at first figuring our how they centered their distributions around the modal temperatures of each species. Ultimately, this was my solution. My plot differs somewhat from theirs, so this might be a source of that discrepancy. However, I don't see a reason why my solution shouldn't work. 
+
 ```{r subset by species}
 #used unique to quickly get a list of species in the kl data set
 unique(kld$species)
@@ -101,7 +119,10 @@ ss9 <- subset(kls, species == "Trachylepis sparsa") %>%
 ss10 <- subset(kls, species == "Trachylepis spilogaster") %>% mutate(Tbm = Tb - getmode(Tb))
 ```
 
-Now we can run the ggplot. In order to show all the species subsets on the same plot, we simply add geom_density() with each of the different subsets. 
+## Step 4: Create ggplot
+
+Now we can run the ggplot. In order to show all the species subsets on the same plot, we add geom_density() with each of the different subsets. I feel there may have been a more stream-lined way to do this, but this did not take me too long either.
+
 ```{r Fig1}
 #constructing density  plots: http://www.sthda.com/english/wiki/ggplot2-density-plot-quick-start-guide-r-software-and-data-visualization
 s <- ggplot(ss1, aes(x=Tbm)) + 
@@ -131,7 +152,7 @@ s <- ggplot(ss1, aes(x=Tbm)) +
 s
 ```
 
-We can see from the figure that most Kalahari lizard species blood temperature is exhibits left skewness. 
+We can see from the figure that most Kalahari lizard species body temperature distributions exhibit left skewness. This relationship was also observed in the original article figure 1. 
 
 ## Comparison with Original Figure 1
 For comparison, we have the origial plot:
@@ -142,14 +163,23 @@ For comparison, we have the origial plot:
 
 ![](https://i.giphy.com/media/9Pi3zBrQIOM4971kuc/giphy.webp)
 
-Figure 3: Body temperature skewness (jittered) for desert lizards, with values by family (or by subfamily for Agamidae) and by continent. Three families are represented by one species. No pattern (desert, taxon) is evident.
 
-```{r kl}
+## Figure 3 Caption
+
+Body temperature skewness (jittered) for desert lizards, with values by family (or by subfamily for Agamidae) and by continent. Three families are represented by one species. No pattern (desert, taxon) is evident.
+
+## Step 1: Load data sets (by country) and calculate statistics
+
+Data was separated into three sets: Africa, Australia, and North America. Below, we load each data set and calculate the statistics for each. I used "kl", "al", and "nl" to name the data sets, representing "kalahari lizards", "australia lizards", and "north american lizards". This syntax is retained throughout. 
+
+```{r load kl data}
 f <- curl("https://raw.githubusercontent.com/maekell98/nkelley-data-replication-assignment/main/doi_10-5/KalahariTbData.csv")
 kl <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
 kl['desert']='Africa'
 head(kl)
+```
 
+```{r kl calculate stats}
 #Basic R script for calculating stats describing Tb distributions:
 klskew <- kl %>%
     group_by(family) %>%
@@ -165,13 +195,16 @@ klskew <- kl %>%
         desert = unique(desert))
 ```
 
-```{r al}
+```{r load al data}
 g <- curl("https://raw.githubusercontent.com/maekell98/nkelley-data-replication-assignment/main/doi_10-5/AustraliaTbData.csv")
 al<- read.csv(g, header = TRUE, sep = ",", stringsAsFactors = FALSE)
 al['desert']='Australia'
+#Here I rename a row because the other two data sets use Tb as the column name for blood temperature but this one for some reason used "BT". Renaming allows for later analysis. 
 names(al)[4]<-paste("Tb")
 head(al)
+```
 
+```{r al calculate stats}
 alskew <- al %>%
     group_by(family) %>%
     summarise(
@@ -186,12 +219,14 @@ alskew <- al %>%
         desert = unique(desert))
 ```
 
-```{r nl}
+```{r load nl data}
 h <- curl("https://raw.githubusercontent.com/maekell98/nkelley-data-replication-assignment/main/doi_10-5/NorthAmericanTbData.csv")
 nl <- read.csv(h, header = TRUE, sep = ",", stringsAsFactors = FALSE)
 nl['desert']='North Amer.'
 head(nl)
+```
 
+```{r nl calculate stats}
 nlskew <- nl %>%
     group_by(family) %>%
     summarise(
@@ -206,16 +241,24 @@ nlskew <- nl %>%
         desert = unique(desert))
 ```
 
+## Step 2: Combine Data into One Data Frame
+
+For analysis of all lizards in the same figure, we combine all the data frames. 
+
 ```{r combining dfs}
 #bind data -- retain all columns but combine columns in common; NA for columns not in common
 #https://www.geeksforgeeks.org/combine-two-dataframes-in-r-with-different-columns/
 ld <- bind_rows(kl, nl, al)
-#oop. Maybe I didn't need this.
+#oop. Maybe I didn't need this. I actually needed to combine the statistics data frames which I do in the next line.
 
 #combine skew summaries:
 lskew <- bind_rows(nlskew, alskew, klskew)
 
 ```
+
+## Step 3: Create Dot Plot
+
+Now we use a dot plot to show the skewness by lizard family and country of origin. 
 
 ```{r Fig3}
 #make a dot plot: http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html
@@ -225,7 +268,8 @@ lplot <-
   geom_point(aes(shape=desert, color=desert), size = 3) +
   scale_shape_manual(values=c(25, 8, 17))+
   scale_color_manual(values=c('red', 'blue', 'grey48'))+
-  scale_fill_manual(values='red')+
+  #frustrated because I couldn't get the Africa triangle to fill. I think it would've worked if all the shapes were fillable, but since two were not, the one that is refuses to fill... I tried to get around this for quite a while, but did not find the solution. 
+  scale_fill_manual(values='red', 'blue', 'grey48')+
   labs(x = "Skewness", y = "Families or subfamilies") +  
   theme_classic() +
   xlim(-2.0, 0.5) +
@@ -249,9 +293,16 @@ You can see my plot did not include the phylogenetic comparison. It also contain
 
 ![](https://i.pinimg.com/originals/e9/9d/0a/e99d0a00805a02b6e2b9835bc2f454aa.gif)
 
-Figure 4: Body temperature histograms (with density curves) for Kalahari lizards in summer. Each panel gives the species name, family, D'Agostino skewness coefficient with significance levels adjusted for multiple comparisons (*p < .05, **p < .01 and ***p < .001) and sample size.
 
-```{r Fig4, fig.width=8,fig.height=11}
+## Figure 4 Caption
+
+Body temperature histograms (with density curves) for Kalahari lizards in summer. Each panel gives the species name, family, D'Agostino skewness coefficient with significance levels adjusted for multiple comparisons (*p < .05, **p < .01 and ***p < .001) and sample size.
+
+## Step 1: Prep Data Frame for Facet Annotations
+
+I wanted to call the skew data frames to annotate the facets, but was having trouble getting the code to work. Instead, I worked around by taking the data from the skew data frames and creating a new data frame with the information I was going to use to annotate the facets. 
+
+```{r annotation data frame}
 #to specify figure dimensions: https://stackoverflow.com/questions/39634520/specify-height-and-width-of-ggplot-graph-in-rmarkdown-knitr-output
 
 #prep data frame for individual facet annotations:
@@ -264,7 +315,13 @@ sig <- c('-1.291 ***', '-0.182 ns', '0.162 ns', '-1.241 ***', '-1.152 **', '1.87
 n <- c('N = 75', 'N = 30', 'N = 83', 'N = 124', 'N = 38', 'N = 290', 'N = 69', 'N = 101', 'N = 73', 'N = 106')
 ann <- cbind(ann, sig, n)
 #n and sig can be found in skewTb data frame as well, but I was having trouble getting these onto my ggplots using just the skewTb df, so I created a new dataframe with the relevant information. 
+```
 
+## Step 2: Make the ggplot
+
+This ggplot was the most fun to make. I learned about using facets as well as quickly annotating facets using prepared information. I feel like this figure contains a lot of information but the code appears very efficient. I had no idea where to begin, but luckily I stumbled upon facets at just the right time! I started by focusing on formatting one ggplot with the histogram and density plot. I was just starting to annotate it and was about to copy and paste for each species when I discovered facets. This saved a lot of time. 
+
+```{r Fig4, fig.width=8,fig.height=11}
 #code for ggplot histogram+density plot: http://www.sthda.com/english/wiki/ggplot2-density-plot-quick-start-guide-r-software-and-data-visualization
 dph1 <- kls %>% 
   ggplot(aes(x=Tb))+
@@ -286,7 +343,18 @@ dph1
 
 ## Comparison with Original Figure 4
 
-For comparison, we have the original plot:
+As you will see, my ggplots appears the same if you take your glasses off. If you look too closely, there are minor discrepancies. I wonder if this is due to differences in the data range selected. In the end, the overall conclusions are the same though. 
+
+Also, a final word on theme: I chose theme_classic() as the theme that most closely replicated their figures. However, they consistently have a thicker font/lines that I do. I googled ggplot themes and was exploring for a closer fit, but I did not find a better solution. However, overall, I am happy with the nearly perfect match that theme_classic() provided. I also would choose to use this theme on my own plots in the future. 
 
 <img src="img/LizardsFig4.jpg" width="750px"/>
+
+# Final Comments
+
+## Personal Takeaways
+After this assignment, I finally feel comfortable using ggplot to accomplish my goals. I also feel that I was able to refine some of my coding style. While it's not perfect, I think this project left me feeling much more confident in my coding abilities. 
+
+## Comments on the Replication/Article
+I found that this article provided enough information for me to replicate the most important analyses and come to the same conclusions as the authors. However, there was some important information missing such as the distinctions between families and subfamilies that they used to create their Figure 3. Ultimately, they came to the conclusion that the phylogenetic analysis was both inappropriate based on their data and when visualized did not provide any significant conclusions. Due to the fact that their data was not intended for phylogenetic analysis, I do not feel that being unable to recreate this analysis is particularly detrimental. However, it would still be preferable if they provided all information necessary to come to the same conclusions as they did. That said, I worked with several other papers/explored fairly extensively in DRYAD before settling on their paper and felt that their data was more clean and accessible to replication than many others before them. 
+
 
